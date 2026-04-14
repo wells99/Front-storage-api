@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Teste CRUD Node -> PHP</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            line-height: 1.6;
+            background: #2e2d2d;
+        }
+
+        .card {
+            background: rgb(145, 142, 142);
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        input {
+            display: block;
+            margin: 10px 0;
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #007bff;
+            color: rgb(163, 158, 158);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #del {
+            background: #d44309;
+            color: rgb(163, 158, 158);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        pre {
+            background: #535252;
+            padding: 10px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+
+        .img-item {
+            display: inline-block;
+            margin: 10px;
+            text-align: center;
+        }
+
+        img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Painel de Testes do Servidor Node</h2>
+
+    <div class="card">
+        <h3>1. Registro e Login</h3>
+        <input type="text" id="email" placeholder="Email" value="meu@email.com">
+        <input type="password" id="pass" placeholder="Senha" value="Teste2026@">
+        <button onclick="registrar()">Registrar</button>
+        <button onclick="login()">Fazer Login</button>
+        <p id="authStatus"></p>
+    </div>
+
+    <div class="card">
+        <h3>2. Upload de Imagem</h3>
+        <input type="file" id="fileInput">
+        <button onclick="upload()">Enviar para PHP</button>
+    </div>
+
+    <div class="card">
+        <h3>3. Listagem e Delete</h3>
+        <button onclick="listar()">Atualizar Lista</button>
+        <div id="listaImagens"></div>
+
+    </div>
+
+    <div class="card">
+        <h3>Console de Resposta</h3>
+        <pre id="consoleLog">Aguardando ação...</pre>
+    </div>
+
+    <script>
+        const log = (data) => document.getElementById('consoleLog').innerText = JSON.stringify(data, null, 2);
+
+        async function registrar() {
+            const res = await fetch('/node-register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: "Teste Node", email: document.getElementById('email').value, password: document.getElementById('pass').value, password_confirmation: document.getElementById('pass').value })
+            });
+            log(await res.json());
+        }
+
+        async function login() {
+            const res = await fetch('/node-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: document.getElementById('email').value, password: document.getElementById('pass').value })
+            });
+            const data = await res.json();
+            if (data.token) document.getElementById('authStatus').innerText = "✅ Logado no Node!";
+            log(data);
+        }
+
+        async function upload() {
+            const file = document.getElementById('fileInput').files[0];
+            const fd = new FormData();
+            fd.append('image', file);
+
+            const res = await fetch('/node-upload', { method: 'POST', body: fd });
+            log(await res.json());
+            listar();
+        }
+
+        async function listar() {
+            const res = await fetch('/node-list');
+            const data = await res.json();
+            log(data);
+            const container = document.getElementById('listaImagens');
+            container.innerHTML = "";
+            if (data.images) {
+                data.images.forEach(img => {
+                    container.innerHTML += `
+                        <div class="img-item">
+                            <img src="${img.url}"><br>
+                            <div>
+                                <small>${img.name}</small> 
+                                <button id="del" onclick="deletar('${img.name}')">Deletar</button>
+                            </div>
+                        </div>`;
+                });
+            }
+        }
+
+        async function deletar(id) {
+            // id aqui é o nome do arquivo, ex: "123_foto.png"
+            const res = await fetch(`/node-delete/${encodeURIComponent(id)}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                console.log("Deletado com sucesso:", data);
+                listar();
+            } else {
+                console.error("Erro ao deletar:", res.status);
+            }
+        }
+
+
+    </script>
+</body>
+
+</html>
